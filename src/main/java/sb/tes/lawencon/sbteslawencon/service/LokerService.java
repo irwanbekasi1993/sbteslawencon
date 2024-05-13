@@ -5,9 +5,7 @@ import java.util.Random;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import sb.tes.lawencon.sbteslawencon.model.BookingLoker;
 import sb.tes.lawencon.sbteslawencon.model.Loker;
-import sb.tes.lawencon.sbteslawencon.model.Pembayaran;
 import sb.tes.lawencon.sbteslawencon.payload.request.UseLokerRequest;
 import sb.tes.lawencon.sbteslawencon.payload.response.MessageResponse;
 import sb.tes.lawencon.sbteslawencon.repository.LokerRepository;
@@ -18,12 +16,7 @@ public class LokerService {
     @Autowired
     private LokerRepository lokerRepository;
 
-    @Autowired
-    private BookingLokerService bookingLokerService;
 
-
-    @Autowired
-    private PembayaranService pembayaranService;
 
 public MessageResponse insertValidation(Loker loker){
     if(getLokerByNomorLoker(loker.getNomorLoker())!=null){
@@ -52,44 +45,6 @@ public MessageResponse updateValidation(Loker loker){
     return new MessageResponse("data loker berhasil diupdate");
 }
 
-public MessageResponse useLoker(UseLokerRequest useLokerRequest){
-    String val="";
-    if(bookingLokerService.getBookingNotBooked(useLokerRequest.getNomorLoker())!=null){
-        Loker cekLoker = lokerRepository.cekNomorLokerAndPassword(useLokerRequest.getNomorLoker(),useLokerRequest.getPassword());
-        
-        int countRetry=0;
-    if(cekLoker==null){
-    String getKodePembayaran = bookingLokerService.getKodePembayaranByNomorLoker(useLokerRequest.getNomorLoker());
-    
-    if(getRetry(useLokerRequest.getNomorLoker())==0){
-        countRetry=1;
-    }
-    if(getRetry(useLokerRequest.getNomorLoker())<=3){
-        countRetry+=getRetry(useLokerRequest.getNomorLoker());
-        updateRetry(countRetry, useLokerRequest.getNomorLoker());
-    }
-                if(getRetry(useLokerRequest.getNomorLoker())==3){
-            //jumlahBiaya biayaloker = 0
-            block(useLokerRequest.getNomorLoker());
-            pembayaranService.block(getKodePembayaran);
-            val = "pelepasan loker berhasil";
-        }
-    }else{
-        lokerRepository.updateBookedStatus(useLokerRequest.getNomorLoker());
-        bookingLokerService.updateSavingStatus(useLokerRequest.getNomorLoker());
-    
-        val ="berhasil akses loker";
-    }
-    
-    
-    }else{
-        val = "data booking loker tidak ada";
-    }
-    return new MessageResponse(val);
-
-    
-}
-
 
 public int otpGenerator(){
     Random random = new Random();
@@ -115,5 +70,12 @@ public MessageResponse block(int nomorLoker){
     return new MessageResponse("mohon maaf anda diblock: ");
 }
 
+public Loker cekNomorLokerAndPassword(int nomorLoker,int password){
+    return lokerRepository.cekNomorLokerAndPassword(nomorLoker, password);
+}
+
+public int updateBookedStatus(int nomorLoker){
+    return lokerRepository.updateBookedStatus(nomorLoker);
+}
 
 }

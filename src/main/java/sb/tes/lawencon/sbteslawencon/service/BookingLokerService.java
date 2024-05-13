@@ -11,6 +11,7 @@ import sb.tes.lawencon.sbteslawencon.model.BookingLoker;
 import sb.tes.lawencon.sbteslawencon.model.Loker;
 import sb.tes.lawencon.sbteslawencon.model.Pembayaran;
 import sb.tes.lawencon.sbteslawencon.model.User;
+import sb.tes.lawencon.sbteslawencon.payload.request.UseLokerRequest;
 import sb.tes.lawencon.sbteslawencon.payload.request.UserBookingRequest;
 import sb.tes.lawencon.sbteslawencon.payload.response.MessageResponse;
 import sb.tes.lawencon.sbteslawencon.payload.response.UserBookingResponse;
@@ -27,6 +28,7 @@ public class BookingLokerService {
 
     @Autowired
     private LokerService lokerService;
+
 
     @Autowired
     private PembayaranService pembayaranService;
@@ -52,7 +54,7 @@ public class BookingLokerService {
 
         BookingLoker bookingLoker = new BookingLoker();
 
-        if(getBookingSaving(u.getNik(),l.getNomorLoker())!=null && getBookingReturning(u.getNik(), l.getNomorLoker())!=null){
+        if(getBookingSaving(l.getNomorLoker())!=null && getBookingReturning( l.getNomorLoker())!=null && userService.getUserByNik(u.getNik())!=null){
             return new MessageResponse("data booking loker masih ada");
         }
         
@@ -77,12 +79,14 @@ public class BookingLokerService {
         return new MessageResponse("data booking loker berhasil diinsert",userBookingResponse);
     }
 
-    public MessageResponse updateReturningStatus(String nik, int nomorLoker){
+    public MessageResponse updateReturningStatus(UseLokerRequest useLokerRequest){
         int deposit=0;
-        BookingLoker bl = getBookingSaving(nik,nomorLoker) ;
-        if(bl!=null){
-            bookingLokerRepository.updateReturningStatus(nik, nomorLoker);
-            lokerService.doReturning(nomorLoker);
+        BookingLoker bl = getBookingSaving(useLokerRequest.getNomorLoker()) ;
+        User cekNik = userService.getUserByNik(bl.getUser().getNik());
+        Loker cekLoker = lokerService.cekNomorLokerAndPassword(useLokerRequest.getNomorLoker(),useLokerRequest.getPassword());
+        if(bl!=null && cekNik!=null && cekLoker!=null){
+            bookingLokerRepository.updateReturningStatus( useLokerRequest.getNomorLoker());
+            lokerService.doReturning(useLokerRequest.getNomorLoker());
             bl.setEndDate(new Timestamp(new Date().getTime()));
             long diff = bl.getStartDate().getTime() - bl.getEndDate().getTime();
         System.out.println ("Days: " + TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS));
@@ -110,11 +114,12 @@ public class BookingLokerService {
 
         Loker l = new Loker();
         l.setNomorLoker(userBookingRequest.getNomorLoker());
+        Loker cekPass = lokerService.getLokerByNomorLoker(l.getNomorLoker());
         lokerService.updateValidation(l);
 
         BookingLoker bookingLoker = new BookingLoker();
         
-        if(getBookingSaving(u.getNik(),l.getNomorLoker())==null && getBookingReturning(u.getNik(), l.getNomorLoker())==null){
+        if(getBookingSaving(cekPass.getNomorLoker())==null && getBookingReturning(cekPass.getNomorLoker())==null && userService.getUserByNik(u.getNik())!=null){
             return new MessageResponse("data booking loker tidak ada");
         }
         
@@ -125,13 +130,52 @@ public class BookingLokerService {
         return new MessageResponse("data booking loker berhasil diupdate");
     }
 
+    public MessageResponse useLoker(UseLokerRequest useLokerRequest){
+    String val="";
+    if(bookingLokerRepository.getBookingNotBooked(useLokerRequest.getNomorLoker())!=null){
+        Loker cekLoker = lokerService.cekNomorLokerAndPassword(useLokerRequest.getNomorLoker(),useLokerRequest.getPassword());
+        
+        int countRetry=0;
+    if(cekLoker==null){
+    String getKodePembayaran = bookingLokerRepository.getKodePembayaranByNomorLoker(useLokerRequest.getNomorLoker());
+    
+    if(lokerService.getRetry(useLokerRequest.getNomorLoker())==0){
+        countRetry=1;
+    }
+    if(lokerService.getRetry(useLokerRequest.getNomorLoker())<=3){
+        countRetry+=lokerService.getRetry(useLokerRequest.getNomorLoker());
+        lokerService.updateRetry(countRetry, useLokerRequest.getNomorLoker());
+    }
+                if(lokerService.getRetry(useLokerRequest.getNomorLoker())==3){
+            //jumlahBiaya biayaloker = 0
+            lokerService.block(useLokerRequest.getNomorLoker());
+            pembayaranService.block(getKodePembayaran);
+            val = "pelepasan loker berhasil";
+        }
+    }else{
+        lokerService.updateBookedStatus(useLokerRequest.getNomorLoker());
+        bookingLokerRepository.updateSavingStatus(useLokerRequest.getNomorLoker());
+    
+        val ="berhasil akses loker";
+    }
+    
+    
+    }else{
+        val = "data booking loker tidak ada";
+    }
+    return new MessageResponse(val);
 
-    public BookingLoker getBookingSaving(String nik,int nomorLoker){
-        return bookingLokerRepository.getBookingSaving(nik,nomorLoker);
+    
+}
+
+
+
+    public BookingLoker getBookingSaving(int nomorLoker){
+        return bookingLokerRepository.getBookingSaving(nomorLoker);
     }
 
-    public BookingLoker getBookingReturning(String nik,int nomorLoker){
-        return bookingLokerRepository.getBookingReturning(nik,nomorLoker);
+    public BookingLoker getBookingReturning(int nomorLoker){
+        return bookingLokerRepository.getBookingReturning(nomorLoker);
     }
 
     public BookingLoker getBookingReturningByNomorLoker(int nomorLoker){

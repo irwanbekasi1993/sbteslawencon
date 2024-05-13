@@ -2,6 +2,7 @@ package sb.tes.lawencon.sbteslawencon.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import sb.tes.lawencon.sbteslawencon.model.BookingLoker;
+import sb.tes.lawencon.sbteslawencon.payload.request.UseLokerRequest;
 import sb.tes.lawencon.sbteslawencon.payload.request.UserBookingRequest;
 import sb.tes.lawencon.sbteslawencon.payload.response.MessageResponse;
 import sb.tes.lawencon.sbteslawencon.payload.response.UserBookingResponse;
@@ -32,27 +34,30 @@ public class BookingLokerController {
         return ResponseEntity.ok(bookingLokerService.updateValidation(userBookingRequest));
     }
 
-    @RequestMapping(value = "/getSaving/{nik}/{kodeLoker}", method = RequestMethod.GET)
-    public ResponseEntity<MessageResponse> getSaving(@PathVariable("nik")String nik,@PathVariable("kodeLoker")int nomorLoker){
+    @RequestMapping(value = "/getSaving/{nomorLoker}", method = RequestMethod.GET)
+    public ResponseEntity<MessageResponse> getSaving(@PathVariable("kodeLoker")int nomorLoker){
         
         UserBookingResponse userBookingResponse = new UserBookingResponse();
-            BookingLoker bl = bookingLokerService.getBookingSaving(nik, nomorLoker);
+            BookingLoker bl = bookingLokerService.getBookingSaving(nomorLoker);
             if(bl!=null){
-                userBookingResponse.setNik(nik);
                 userBookingResponse.setNomorLoker(nomorLoker);
             }
         return ResponseEntity.ok(new MessageResponse("data booking loker: ",userBookingResponse));
     }
 
-    @RequestMapping(value = "/getReturning/{nik}/{nomorLoker}", method = RequestMethod.GET)
-    public ResponseEntity<MessageResponse> getReturning(@PathVariable("nik")String nik,@PathVariable("nomorLoker")int nomorLoker){
-        BookingLoker bl = bookingLokerService.getBookingReturning(nik, nomorLoker);
+    @RequestMapping(value = "/getReturning/{nomorLoker}", method = RequestMethod.GET)
+    public ResponseEntity<MessageResponse> getReturning(@PathVariable("nomorLoker")int nomorLoker){
+        BookingLoker bl = bookingLokerService.getBookingReturning(nomorLoker);
         return ResponseEntity.ok(new MessageResponse("data loker: ",bl));
     }
 
     @RequestMapping(value = "/return", method=RequestMethod.PUT)
-    public ResponseEntity<MessageResponse> requestMethodName(@RequestBody UserBookingRequest userBookingRequest) {
-        return ResponseEntity.ok(bookingLokerService.updateReturningStatus(userBookingRequest.getNik(), userBookingRequest.getNomorLoker()));
+    public ResponseEntity<MessageResponse> requestMethodName(@RequestBody UseLokerRequest useLokerRequest) {
+        return ResponseEntity.ok(bookingLokerService.updateReturningStatus(useLokerRequest));
     }
     
+    @RequestMapping(value="/useLoker", method=RequestMethod.POST)
+    public ResponseEntity<MessageResponse> useLoker(@RequestBody UseLokerRequest useLokerRequest){
+        return ResponseEntity.ok(bookingLokerService.useLoker(useLokerRequest));
+    } 
 }

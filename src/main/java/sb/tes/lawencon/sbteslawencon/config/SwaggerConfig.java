@@ -1,34 +1,48 @@
 package sb.tes.lawencon.sbteslawencon.config;
 
+import java.util.Arrays;
+
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import springfox.documentation.builders.RequestHandlerSelectors;
-import springfox.documentation.spi.DocumentationType;
-import springfox.documentation.spring.web.plugins.Docket;
 
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled=true)
-public class SwaggerConfig extends WebSecurityConfigurerAdapter{
-@Override
-	protected void configure(HttpSecurity httpSecurity) throws Exception{
-		httpSecurity.cors().and().csrf().disable()
-			.authorizeRequests().antMatchers("/sbteslawencon/api/v1/**","/swagger-ui/**","/swagger-ui.html","/webjars/**","/v2/**","/swagger-resources/**").
+public class SwaggerConfig {
+@Bean
+	public SecurityFilterChain configure(HttpSecurity httpSecurity) throws Exception{
+		httpSecurity.cors(cors->corsConfigurationSource())
+		.csrf(csrf->csrf.disable())
+		.authorizeHttpRequests((request)->request.requestMatchers("/sbteslawencon/api/v1/**","/swagger-ui/**","/swagger-ui.html","/webjars/**","/v2/**","/swagger-resources/**","/v3/api-docs/**").
             permitAll()
-			.anyRequest().authenticated();
-
+			.anyRequest().authenticated());
+		return httpSecurity.build();
     }
 
+
 	@Bean
-	public Docket dosenApi() {
-		return new Docket(DocumentationType.SWAGGER_2).select().apis(RequestHandlerSelectors.basePackage("sb.tes.lawencon.sbteslawencon")).build();
+	public GroupedOpenApi api(){
+		return GroupedOpenApi.builder().group("sbteslawencon").pathsToMatch("/sbteslawencon/api/v1/**").build();
 	}
+
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource(){
+		CorsConfiguration corsConfiguration = new CorsConfiguration();
+		corsConfiguration.setAllowedOrigins(Arrays.asList("*"));
+		corsConfiguration.setAllowedMethods(Arrays.asList("*"));
+		corsConfiguration.setAllowedHeaders(Arrays.asList("*"));
+		UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
+		urlBasedCorsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);
+		return urlBasedCorsConfigurationSource;
+	}
+
+	
 
 }
